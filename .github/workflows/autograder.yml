@@ -1,0 +1,54 @@
+name: He Thong Cham Diem Tu Dong
+
+# 1. KHI NÀO CHẠY?
+# Sẽ kích hoạt khi sinh viên push code lên nhánh main
+on:
+  push:
+    branches: [ "main" ]
+
+# 2. THUÊ MÁY ẢO NÀO?
+jobs:
+  cham-bai-thi:
+    runs-on: windows-latest #  # Thuê máy ảo Windows mới nhất của GitHub (Miễn phí)
+
+    # 3. CÁC BƯỚC THỰC HIỆN
+    steps:
+      # Bước 1: Hành động "checkout" nghĩa là tải code của repo hiện tại (bài sinh viên) về máy ảo
+      - name: 1. Tải code của Sinh viên về máy ảo
+        uses: actions/checkout@v4
+
+      # Bước 2: Cài đặt môi trường Flutter lên máy ảo Linux đó
+      - name: 2. Cài đặt Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.38.5' # Chỉnh lại đúng phiên bản bạn đang dùng
+          channel: 'stable'
+
+      # Bước 3: Cài các thư viện có trong file pubspec.yaml của sinh viên
+      - name: 3. Tải các package thư viện
+        run: flutter pub get
+
+      # Bước 4: (BÍ MẬT) Máy ảo âm thầm tải Repo chứa file test của Giảng viên về
+      - name: 4. Tải đáp án của Giảng viên
+        uses: actions/checkout@v4
+        with:
+          repository: 'phamkhiem004/grader_demo' # Thay bằng link repo thực tế của bạn
+          token: ${{ secrets.TEACHER_TOKEN }} # Chìa khóa bí mật để vào repo Private
+          path: 'teacher_code' # Tải về và bỏ tạm vào thư mục tên là teacher_code
+
+      # Bước 5: Ghép code! Lấy thư mục test của giáo viên chép đè vào bài sinh viên
+      - name: 5. Hợp nhất Test Case
+        run: |
+          cp -r teacher_code/test ./test
+          rm -rf teacher_code
+        shell: bash # Bắt buộc thêm dòng này để chạy lệnh cp, rm trên Windows
+
+      # Bước 6: Chạy trái tim của hệ thống
+      - name: 6. Chạy lệnh chấm điểm
+        run: dart run test/grader.dart > skills_matrix.json
+        shell: bash
+
+      # Bước 7: Xem tạm kết quả trên màn hình Console của GitHub
+      - name: 7. In kết quả ra màn hình
+        run: cat skills_matrix.json
+        shell: bash # Bắt buộc thêm dòng này để chạy lệnh cat trên Windows
